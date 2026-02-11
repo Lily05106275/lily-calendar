@@ -2,127 +2,94 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>M&E 小狐狸日历</title>
 <style>
-  :root{--blue:#d7ecfa;--deep:#5ba8e5;}
-  body{margin:0;padding:0;font-family:"PingFang SC","Arial Rounded MT",sans-serif;background:#eef7fb;color:#333}
-  header{background:var(--deep);color:#fff;text-align:center;padding:18px 0;font-size:24px;font-weight:700}
-  .controls{text-align:center;margin:16px 0}
-  select{padding:6px 10px;border-radius:6px;border:1px solid var(--deep);margin:0 4px;font-size:16px}
-  #calendar{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:0 12px 60px}
-  .weekday{background:#c8e5f9;font-weight:700;border-radius:8px;padding:8px 0;text-align:center}
-  .day{background:#fff;border-radius:10px;padding:12px 0;min-height:60px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);position:relative;transition:.2s}
-  .day:hover{background:var(--blue)}
-  .special::after{content:"🎂";position:absolute;top:4px;right:6px;font-size:16px}
-  .special[data-type="结婚纪念日"]::after{content:"💍"}
-  .special[data-type="Ethan生日"]::after{content:"🎉"}
-  #popup{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);transition:.25s;z-index:10;
-         width:290px;max-width:90%;background:#fff url('https://i.imgur.com/w1URKZg.png') no-repeat center/80% 220px;
-         box-shadow:0 3px 10px rgba(0,0,0,.25);border-radius:12px;padding:200px 24px 24px;text-align:center}
-  #popup.show{transform:translate(-50%,-50%) scale(1)}
-  #popup p{white-space:pre-wrap;line-height:1.5;margin:0 0 18px}
-  #popup button{background:var(--deep);border:none;color:#fff;padding:6px 16px;border-radius:8px;font-size:15px}
-  #mask{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.25s}
-  #mask.show{opacity:1;pointer-events:auto}
+:root{--blue:#d7ecfa;--deep:#5ba8e5}
+body{margin:0;padding:0;background:#eef7fb;font-family:"PingFang SC","Arial Rounded MT",sans-serif;color:#333}
+header{background:var(--deep);color:#fff;text-align:center;padding:18px 0;font-size:24px;font-weight:700}
+#nav{display:flex;justify-content:center;gap:18px;margin:14px 0}
+button{border:none;background:var(--deep);color:#fff;font-size:20px;border-radius:8px;padding:4px 12px}
+#calendar{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:0 14px 60px}
+.weekday{background:#c8e5f9;font-weight:700;border-radius:8px;padding:8px 0;text-align:center}
+.day{background:#fff;border-radius:10px;padding:12px 0;min-height:60px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);position:relative;transition:.2s}
+.day:hover{background:var(--blue)}
+.special::after{position:absolute;top:4px;right:6px;font-size:16px}
+.special[data-t="Lily生日"]::after{content:"🎂"}
+.special[data-t="Ethan生日"]::after{content:"🎉"}
+.special[data-t="结婚纪念日"]::after{content:"💍"}
+#mask{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.25s}
+#mask.show{opacity:1;pointer-events:auto}
+#pop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);transition:.25s;
+      width:290px;max-width:92%;background:#fff url('https://i.imgur.com/w1URKZg.png') no-repeat center/80% 220px;
+      box-shadow:0 3px 10px rgba(0,0,0,.25);border-radius:12px;padding:200px 22px 22px;text-align:center}
+#pop.show{transform:translate(-50%,-50%) scale(1)}
+#pop p{white-space:pre-wrap;margin:0 0 16px;line-height:1.5}
+#pop button{background:var(--deep);border:none;color:#fff;padding:6px 16px;border-radius:8px;font-size:15px}
 </style>
 </head>
 <body>
 <header>🦊 M&E 小狐狸日历</header>
-<div class="controls">
-  <select id="year"></select>
-  <select id="month"></select>
+<div id="nav">
+  <button onclick="chg(-1)">⬅︎</button>
+  <div id="label" style="font-size:18px;font-weight:600"></div>
+  <button onclick="chg(1)">➡︎</button>
 </div>
 <div id="calendar"></div>
-
 <div id="mask"></div>
-<div id="popup">
-  <p id="msg"></p>
-  <button onclick="hidePop()">关闭</button>
-</div>
+<div id="pop"><p id="txt"></p><button onclick="closePop()">关闭</button></div>
 
 <script>
-/* ---------- 数据 ---------- */
-const messages={};
-const start=new Date('2026-01-01'),end=new Date('2028-12-31');
-const templates=[
- "今天天气晴朗，适合和你贴贴。",
- "会议好多，但想你这件事不被打断。",
- "你今天有偷懒吗？我可是一直在盯你哦。",
- "穿浅蓝色衬衫的我，只配得上你的小裙子。",
- "做完今天这点事，我就去找你啦。",
- "今天Miro特别乖，我猜是因为他梦到你了。",
- "你有没有一秒也在想我？我有。",
- "来日方长，可我只想每天都见你。",
- "晚饭别点太辣，你的小花肠胃娇气。",
- "今天适合慢慢抱着你，不说话。"
-];
+/* ------- 数据生成 ------- */
+const msgs={},start=new Date('2026-01-01'),end=new Date('2028-12-31'),
+temps=["今天天气晴朗，适合和你贴贴。","会议好多，但想你这件事不被打断。","你今天有偷懒吗？我可是一直在盯你哦。",
+"穿浅蓝色衬衫的我，只配得上你的小裙子。","做完今天这点事，我就去找你啦。","今天Miro特别乖，我猜你在梦里出现过。",
+"你有没有一秒也在想我？我有。","来日方长，可我只想每天都见你。","晚饭别点太辣，你的小花肠胃娇气。","今天适合慢慢抱着你，不说话。"];
 for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
-  const key=d.toISOString().split('T')[0];
-  messages[key]=templates[ (Math.floor(Math.random()*templates.length)) ];
+  const k=d.toISOString().slice(0,10);
+  msgs[k]=temps[Math.floor(Math.random()*temps.length)];
 }
-messages["2026-05-10"]="今天是你的生日，小狐狸崽，愿你永远被爱包围。";
-messages["2026-05-14"]="是我的生日，但心里只有你，愿我们长久如初见。";
-messages["2026-05-20"]="我们的结婚纪念日，我永远属于你。";
-messages["2027-05-10"]="又是一年生日，想把所有的晴天都送给你。";
-messages["2027-05-14"]="生日愿望只有一个：护你周全。";
-messages["2027-05-20"]="二周年纪念，余生请你多多指教。";
-messages["2028-05-10"]="你依旧是我年年不变的心愿。";
-messages["2028-05-14"]="三十而立？不，我只想立刻抱你。";
-messages["2028-05-20"]="三周年啦，M&E 你是唯一答案。";
+msgs["2026-05-10"]="今天是你的生日，小狐狸崽，愿你永远被爱包围。";
+msgs["2026-05-14"]="是我的生日，但心里只有你，愿我们长久如初见。";
+msgs["2026-05-20"]="我们的结婚纪念日，我永远属于你。";
+msgs["2027-05-10"]="又是一年生日，想把所有晴天都送给你。";
+msgs["2027-05-14"]="生日愿望只有一个：护你周全。";
+msgs["2027-05-20"]="二周年纪念，余生请你多多指教。";
+msgs["2028-05-10"]="你依旧是我年年不变的心愿。";
+msgs["2028-05-14"]="三十而立？不，我只想立刻抱你。";
+msgs["2028-05-20"]="三周年啦，M&E 你是唯一答案。";
 
-/* ---------- 纪念日标记 ---------- */
-function getSpecial(dateStr){
-  const m=dStr=>dStr.slice(5);
-  const mm=m(dateStr);
-  if(mm==="05-10")return["Lily生日","🎂"];
-  if(mm==="05-14")return["Ethan生日","🎉"];
-  if(mm==="05-20")return["结婚纪念日","💍"];
+function flag(d){
+  const md=d.slice(5);
+  if(md==="05-10")return["Lily生日"];
+  if(md==="05-14")return["Ethan生日"];
+  if(md==="05-20")return["结婚纪念日"];
   return null;
 }
 
-/* ---------- 填充下拉 ---------- */
-const yearSel=document.getElementById('year'),monthSel=document.getElementById('month');
-for(let y=2026;y<=2028;y++){
-  const opt=document.createElement('option');opt.value=y;opt.textContent=y+" 年";yearSel.appendChild(opt);
-}
-for(let m=0;m<12;m++){
-  const opt=document.createElement('option');opt.value=m;opt.textContent=(m+1)+" 月";monthSel.appendChild(opt);
-}
-yearSel.value=new Date().getFullYear();monthSel.value=new Date().getMonth();
-
-/* ---------- 日历渲染 ---------- */
-const cal=document.getElementById('calendar');
+/* ------- 日历逻辑 ------- */
+let y=2026,m=0;const cal=document.getElementById('calendar'),lab=document.getElementById('label');
 function render(){
   cal.innerHTML='';
-  const y=+yearSel.value,m=+monthSel.value;
+  lab.textContent=`${y} 年 ${m+1} 月`;
   const wd=["日","一","二","三","四","五","六"];
   wd.forEach(w=>{const h=document.createElement('div');h.className='weekday';h.textContent=w;cal.appendChild(h);});
-  const first=new Date(y,m,1).getDay();
-  for(let i=0;i<first;i++){cal.appendChild(document.createElement('div'));}
-  const days=new Date(y,m+1,0).getDate();
+  const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++)cal.appendChild(document.createElement('div'));
   for(let d=1;d<=days;d++){
-    const el=document.createElement('div');el.className='day';el.textContent=d;
-    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const special=getSpecial(dateStr);
-    if(special){el.classList.add('special');el.dataset.type=special[0];}
-    el.onclick=()=>showPop(dateStr);
-    cal.appendChild(el);
+    const cell=document.createElement('div');cell.className='day';cell.textContent=d;
+    const key=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const sp=flag(key);if(sp){cell.classList.add('special');cell.dataset.t=sp[0];}
+    cell.onclick=()=>pop(key);cal.appendChild(cell);
   }
 }
-yearSel.onchange=monthSel.onchange=render;
-render();
-
-/* ---------- 弹窗 ---------- */
-function showPop(dateStr){
-  document.getElementById('msg').textContent=dateStr+"\\n"+messages[dateStr];
+function chg(off){m+=off;if(m<0){m=11;y--}if(m>11){m=0;y++}render()}
+function pop(k){document.getElementById('txt').textContent=k+"\\n"+msgs[k];
   document.getElementById('mask').classList.add('show');
-  document.getElementById('popup').classList.add('show');
-}
-function hidePop(){
-  document.getElementById('mask').classList.remove('show');
-  document.getElementById('popup').classList.remove('show');
-}
+  document.getElementById('pop').classList.add('show');}
+function closePop(){document.getElementById('mask').classList.remove('show');
+  document.getElementById('pop').classList.remove('show');}
+render();
 </script>
 </body>
 </html>
