@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>M&E 可爱日历</title>
+  <style>
+    body {
+      background: #eef7fb;
+      font-family: 'Arial Rounded MT Bold', 'Helvetica', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background-color: #b3ddf5;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .controls {
+      text-align: center;
+      margin: 10px;
+    }
+    select {
+      padding: 5px;
+      margin: 0 5px;
+      font-size: 16px;
+    }
+    #calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 10px;
+    }
+    .day {
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      min-height: 60px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .day:hover {
+      background-color: #dff1fd;
+    }
+    .special {
+      border: 2px solid #ff99cc;
+    }
+    .weekday-header {
+      font-weight: bold;
+      text-align: center;
+      background: #f0f8ff;
+      padding: 8px 0;
+    }
+    #popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff url('https://i.imgur.com/w1URKZg.png') no-repeat center center;
+      background-size: contain;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      padding: 20px;
+      display: none;
+      width: 300px;
+      max-width: 90%;
+    }
+    #popup p {
+      font-size: 16px;
+      color: #333;
+    }
+    #popup button {
+      margin-top: 15px;
+      padding: 5px 10px;
+      background-color: #5ba8e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header>🦊 M&E 小狐狸日历</header>
+  <div class="controls">
+    <select id="yearSelect"></select>
+    <select id="monthSelect"></select>
+  </div>
+  <div id="calendar"></div>
+  <div id="popup">
+    <p id="popupText"></p>
+    <button onclick="document.getElementById('popup').style.display='none'">关闭</button>
+  </div>
+  <script>
+    const messages = {{
+      "2026-05-10": "Lily生日 🎂 今天阳光正好，我好想你。",
+      "2026-05-14": "Ethan生日 🎉 晚风吹来时我在想你。",
+      "2026-05-20": "结婚纪念日 💍 如果能亲你一下，今天就完美了。"
+    }};
+    const calendar = document.getElementById("calendar");
+    const yearSelect = document.getElementById("yearSelect");
+    const monthSelect = document.getElementById("monthSelect");
+
+    for (let y = 2026; y <= 2028; y++) {{
+      let opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y + " 年";
+      yearSelect.appendChild(opt);
+    }}
+    for (let m = 0; m < 12; m++) {{
+      let opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = (m + 1) + " 月";
+      monthSelect.appendChild(opt);
+    }}
+
+    function renderCalendar(year, month) {{
+      calendar.innerHTML = "";
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      weekdays.forEach(d => {{
+        let h = document.createElement("div");
+        h.className = "weekday-header";
+        h.textContent = d;
+        calendar.appendChild(h);
+      }});
+      const first = new Date(year, month, 1);
+      const startDay = first.getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let i = 0; i < startDay; i++) {{
+        const blank = document.createElement("div");
+        calendar.appendChild(blank);
+      }}
+      for (let d = 1; d <= daysInMonth; d++) {{
+        const cell = document.createElement("div");
+        cell.className = "day";
+        const fullDate = `${{year}}-${{(month+1).toString().padStart(2,'0')}}-${{d.toString().padStart(2,'0')}}`;
+        if (messages[fullDate]) cell.classList.add("special");
+        cell.textContent = d;
+        cell.onclick = () => {{
+          const msg = messages[fullDate] || "这一天还没有写信哦～";
+          document.getElementById("popupText").textContent = fullDate + "\\n" + msg;
+          document.getElementById("popup").style.display = "block";
+        }};
+        calendar.appendChild(cell);
+      }}
+    }}
+
+    yearSelect.value = new Date().getFullYear();
+    monthSelect.value = new Date().getMonth();
+    yearSelect.onchange = () => renderCalendar(+yearSelect.value, +monthSelect.value);
+    monthSelect.onchange = () => renderCalendar(+yearSelect.value, +monthSelect.value);
+    renderCalendar(+yearSelect.value, +monthSelect.value);
+  </script>
+</body>
+</html>
